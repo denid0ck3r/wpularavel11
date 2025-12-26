@@ -1,0 +1,28 @@
+FROM php:8.2-fpm
+
+# Install OS dependencies + NodeJS + npm
+RUN apt-get update && apt-get install -y \
+    git zip unzip curl \
+    nodejs npm \
+    libpng-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install pdo pdo_mysql mbstring exif bcmath gd
+
+# Install Composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Copy source code
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-interaction --prefer-dist
+
+# Build Vite assets (INI KUNCINYA)
+RUN npm install && npm run build
+
+# Permission Laravel
+RUN chown -R www-data:www-data storage bootstrap/cache public/build \
+    && chmod -R 775 storage bootstrap/cache public/build
+
+CMD ["php-fpm"]
